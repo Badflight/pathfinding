@@ -13,6 +13,8 @@ class PathFindingScene extends Phaser.Scene {
     activeEnemy
     /** @type {number} */
     minEnemies = 2
+    /**@type {number} */
+    ammo = 5
     /** @type  {Phaser.Physics.Arcade.Group} */
     bullets
     constructor() {
@@ -27,9 +29,11 @@ class PathFindingScene extends Phaser.Scene {
         this.load.image('playerGun', 'assets/man-with-gun.png')
         //enenmy asset
         this.load.image('enemy', 'assets/enemy.png')
+        this.load.image('deadEnemy', 'assets/dead-enemy.png')
         //weapon asset
         this.load.image('gun', 'assets/gun.png')
         this.load.image('bullet', 'assets/bullet.png')
+        this.load.image('ammo', 'assets/ammoClip.png')
 
     }
     create() {
@@ -68,6 +72,7 @@ class PathFindingScene extends Phaser.Scene {
         //enemy stuff
         this.events.on('enemyready', this.handleEnemyMove, this)
         this.time.delayedCall(1000, this.onEnemySpawn, [], this)
+        this.time.delayedCall(4000, this.onEnemySpawn, [], this)
         //@ts-ignore
         this.finder = new EasyStar.js()
         //create 2d representation
@@ -118,7 +123,39 @@ class PathFindingScene extends Phaser.Scene {
         this.finder.calculate()
     }
     moveEnemy(path) {
-        console.log(path)
+        if(this.player.isDead){
+            return
+        }
+        let tweenList = []
+        for(let i=0;i<path.length-1;i++){
+            //current pos
+            let cx = path[i].x
+            let cy = path[i].y
+            // target pos
+            let dx = path[i + 1].x
+            let dy = path[i + 1].y
+            //target angle
+            let a
+            if(dx>cx){
+                a = 0
+            }else if(dx<cx){
+                a=180
+            }else if(dy> cy){
+                a = 90
+            }else if(dy<cy){
+                a = 270
+            }
+            //phaser tween
+            tweenList.push({
+                targets: this.activeEnemy.sprite,
+                x:{value: (dx * this.map.tileWidth)+(0.5*this.map.tileWidth),duration:this.activeEnemy.speed},
+                y:{value: (dy*this.map.tileHeight)+(0.5*this.map.tileHeight), duration:this.activeEnemy.speed},
+                angle:{value:a, duration: 0}
+            })
+        }
+        this.tweens.timeline({
+            tweens:tweenList
+        })
     }
     onEnemySpawn() {
         let index = Phaser.Math.Between(0, this.enemySpawnPoints.length - 1)
@@ -135,6 +172,8 @@ class PathFindingScene extends Phaser.Scene {
         this.activeEnemy = enemy
         let toX = Math.floor(this.player.sprite.x / this.map.tileWidth) * this.map.tileWidth + (this.map.tileWidth / 2)
         let toY = Math.floor(this.player.sprite.y / this.map.tileHeight) * this.map.tileHeight + (this.map.tileHeight / 2)
+        enemy.targetX=toX
+        enemy.targetY=toY
         this.findPath({ x:toX, y:toY})
     }
     collectGun(player, gun) {
@@ -149,14 +188,21 @@ class PathFindingScene extends Phaser.Scene {
         vector.rotate(this.player.sprite.rotation)
         console.log(vector)
         let bullet = this.bullets.get(this.player.sprite.x + vector.x, this.player.sprite.y + vector.y)
+        if(this.ammo >=0){
         if (bullet) {
+            this.ammo -=1
+            console.log('ammo:'+this.ammo)
             bullet.setDepth(4)
             bullet.body.collideWorldBounds = true
             bullet.body.onWorldBounds = true
             bullet.enableBody(false, bullet.x, bullet.y, true, true)
             bullet.rotation = this.player.sprite.rotation
-            this.physics.velocityFromRotation(bullet.rotation, 200, bullet.body.velocity)
+            this.physics.velocityFromRotation(bullet.rotation, 700, bullet.body.velocity)
+            for(let i = 0;i<this.enemies.length; i++){
+                this.physics.add.collider(this.enemies[i].sprite,bullet, this.bulletHitEnemy,null, this)
+            }
         }
+    }
     }
     worldBoundsBullet(body) {
         //return bullet to object pool
@@ -166,8 +212,27 @@ class PathFindingScene extends Phaser.Scene {
         bullet.disableBody(true, true)
     }
     bulletHitEnemy(enemySprite, bullet) {
+        bullet.disableBody(true, true)
+        let index
+        for(let i = 0; i< this.enemies.length; i++){
+            if(this.enemies[i].sprite ===enemySprite){
+                index = i
+                break
+            }
+        }
+        this.enemies.splice(index, 1)
+        this.add.image(enemySprite.x,enemySprite.y,'deadEnemy').setRotation(enemySprite.rotation).setDepth(0)
+        enemySprite.destroy()
+        if(!this.player.isDead&&this.enemies.length<this.minEnemies){
+            this.onEnemySpawn()
+        }
+
     }
-    collideEnemy(player, sprite) {
+    collideEnemy(player, enemySprite) {
+        this.tweens.killAll()
+        this.physics.pause()
+        this.player.isDead = true
+        this.player.sprite.setTint(0xFF0000)
     }
     update(time, delta) {
         this.player.update(time, delta)

@@ -20,6 +20,12 @@ class Enemy{
             this.pendingMove = true
             this.scene.time.delayedCall(500, this.beginMove, [], this)
         }
+        if(this.sprite.angle==0 ||Math.abs(this.sprite.angle) ==180){
+            this.sprite.setSize(this.sprite.width,this.sprite.height)
+        }
+        else if(Math.abs(this.sprite.angle)==90||Math.abs(this.sprite.angle)==270){
+            this.sprite.setSize(this.sprite.height,this.sprite.width)
+        }
     }
     beginMove(){
         this.scene.events.emit('enemyready', this)
