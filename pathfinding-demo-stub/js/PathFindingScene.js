@@ -9,6 +9,8 @@ class PathFindingScene extends Phaser.Scene {
     enemies = []
     /** @type {Array.<object>} */
     enemySpawnPoints = []
+    /**@type {Door} */
+    door
     /** @type {Enemy} */
     activeEnemy
     /** @type {number} */
@@ -34,6 +36,8 @@ class PathFindingScene extends Phaser.Scene {
         this.load.image('gun', 'assets/gun.png')
         this.load.image('bullet', 'assets/bullet.png')
         this.load.image('ammo', 'assets/ammoClip.png')
+        //door asset
+        this.load.image('door','assets/door.png')
 
     }
     create() {
@@ -56,6 +60,10 @@ class PathFindingScene extends Phaser.Scene {
             } else if (dataObject.type === "enemySpawn") {
                 //@ts-ignore
                 this.enemySpawnPoints.push(dataObject)
+            }
+            else if(dataObject.type ==="doorSpawn"){
+                this.door=new Door(this,dataObject.x,dataObject.y,'door')
+                
             }
         }, this)
         this.physics.add.collider(this.player.sprite, groundAndWallsLayer)

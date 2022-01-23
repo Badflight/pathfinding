@@ -1,12 +1,4 @@
 { "compressionlevel":-1,
- "editorsettings":
-    {
-     "export":
-        {
-         "format":"json",
-         "target":"tilemap.json"
-        }
-    },
  "height":20,
  "infinite":false,
  "layers":[
@@ -98,6 +90,18 @@
                  "width":0,
                  "x":850,
                  "y":1350
+                }, 
+                {
+                 "height":0,
+                 "id":9,
+                 "name":"door",
+                 "point":true,
+                 "rotation":0,
+                 "type":"doorSpawn",
+                 "visible":true,
+                 "width":0,
+                 "x":1900,
+                 "y":1200
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -106,10 +110,10 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":9,
+ "nextobjectid":10,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.4.3",
+ "tiledversion":"1.7.2",
  "tileheight":100,
  "tilesets":[
         {
@@ -308,6 +312,6 @@
         }],
  "tilewidth":100,
  "type":"map",
- "version":1.4,
+ "version":"1.6",
  "width":20
 }

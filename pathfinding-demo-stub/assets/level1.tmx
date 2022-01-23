@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="100" tileheight="100" infinite="0" nextlayerid="3" nextobjectid="9">
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="100" tileheight="100" infinite="0" nextlayerid="3" nextobjectid="10">
  <editorsettings>
   <export target="tilemap.json" format="json"/>
  </editorsettings>
@@ -147,6 +147,9 @@
    <point/>
   </object>
   <object id="8" name="gun" type="gunSpawn" x="850" y="1350">
+   <point/>
+  </object>
+  <object id="9" name="door" type="doorSpawn" x="1900" y="1200">
    <point/>
   </object>
  </objectgroup>
