@@ -17,6 +17,8 @@ class Player {
     isDead = false
     /** @type {boolean} */
     hasGun = false
+    /**@type {number} */
+    ammo = 10
 
     constructor(scene, x, y, texture) {
         this.scene = scene

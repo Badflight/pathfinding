@@ -7,6 +7,12 @@ class PathFindingScene extends Phaser.Scene {
     gun
     /** @type {Array.<Enemy>} */
     enemies = []
+    /**@type {Array.<Collectable>} */
+    collectables
+    /**@type {number} */
+    collectionTotal = 0
+    /**@type {Collectable} */
+    singularCollectable
     /** @type {Array.<object>} */
     enemySpawnPoints = []
     /**@type {Door} */
@@ -15,10 +21,10 @@ class PathFindingScene extends Phaser.Scene {
     activeEnemy
     /** @type {number} */
     minEnemies = 2
-    /**@type {number} */
-    ammo = 5
     /** @type  {Phaser.Physics.Arcade.Group} */
     bullets
+    /**@type {Phaser.Physics.Arcade.Group} */
+    ammoClips
     constructor() {
         super({ key: 'pathFindingScene' })
     }
@@ -37,7 +43,9 @@ class PathFindingScene extends Phaser.Scene {
         this.load.image('bullet', 'assets/bullet.png')
         this.load.image('ammo', 'assets/ammoClip.png')
         //door asset
-        this.load.image('door','assets/door.png')
+        this.load.image('door', 'assets/door.png')
+        //collectable asset
+        this.load.image('collectable1', 'assets/blue-jewel.png')
 
     }
     create() {
@@ -48,6 +56,8 @@ class PathFindingScene extends Phaser.Scene {
         const groundAndWallsLayer = this.map.createLayer('groundAndWallsLayer', tileset, 0, 0)
         const objectLayer = this.map.getObjectLayer('objectLayer')
         groundAndWallsLayer.setCollisionByProperty({ valid: false })
+        let ammoObjects = []
+        let collectablePoints = []
         //player creation
         objectLayer.objects.forEach(function (object) {
             let dataObject = Utils.RetrieveCustomProperties(object)
@@ -61,11 +71,20 @@ class PathFindingScene extends Phaser.Scene {
                 //@ts-ignore
                 this.enemySpawnPoints.push(dataObject)
             }
-            else if(dataObject.type ==="doorSpawn"){
-                this.door=new Door(this,dataObject.x,dataObject.y,'door')
-                
+            else if (dataObject.type === "doorSpawn") {
+                this.door = new Door(this, dataObject.x, dataObject.y, 'door')
+            }
+            else if (dataObject.type === "ammoPickup") {
+                ammoObjects.push(dataObject)
+            }
+            else if (dataObject.type === "collectableSpawn") {
+                collectablePoints.push(dataObject)
+                console.log('collectable')
             }
         }, this)
+        for (let i = 0; i < collectablePoints.length; i++) {
+            this.createCollectable(collectablePoints[i])
+        }
         this.physics.add.collider(this.player.sprite, groundAndWallsLayer)
         this.physics.add.overlap(this.player.sprite, this.gun, this.collectGun, null, this)
         //bullet group
@@ -109,6 +128,12 @@ class PathFindingScene extends Phaser.Scene {
         }
         //which tiles the enemy can use
         this.finder.setAcceptableTiles(acceptabileTiles)
+        for (let i = 0; i < ammoObjects.length; i++) {
+            this.createAmmo(ammoObjects[i])
+        }
+        this.ammoText = this.add.text(32, 32, 'ammo' + this.player.ammo, {
+            fontSize: '96px'
+        }).setScrollFactor(0)
     }
     findPath(point) {
         //point object has x and y in pixels
@@ -116,14 +141,14 @@ class PathFindingScene extends Phaser.Scene {
         let toY = Math.floor(point.y / this.map.tileHeight)
         let fromX = Math.floor(this.activeEnemy.sprite.x / this.map.tileWidth)
         let fromY = Math.floor(this.activeEnemy.sprite.y / this.map.tileHeight)
-        console.log('going from' + fromX + '+' + fromY + 'to' + toX + 'and' + toY)
+        //console.log('going from' + fromX + '+' + fromY + 'to' + toX + 'and' + toY)
         let callback = this.moveEnemy.bind(this)
         this.finder.findPath(fromX, fromY, toX, toY, function (path) {
             if (path === null) {
-                console.warn("path not found")
+
             }
             else {
-                console.log('its fine')
+
                 callback(path)
             }
         })
@@ -131,11 +156,11 @@ class PathFindingScene extends Phaser.Scene {
         this.finder.calculate()
     }
     moveEnemy(path) {
-        if(this.player.isDead){
+        if (this.player.isDead) {
             return
         }
         let tweenList = []
-        for(let i=0;i<path.length-1;i++){
+        for (let i = 0; i < path.length - 1; i++) {
             //current pos
             let cx = path[i].x
             let cy = path[i].y
@@ -144,32 +169,31 @@ class PathFindingScene extends Phaser.Scene {
             let dy = path[i + 1].y
             //target angle
             let a
-            if(dx>cx){
+            if (dx > cx) {
                 a = 0
-            }else if(dx<cx){
-                a=180
-            }else if(dy> cy){
+            } else if (dx < cx) {
+                a = 180
+            } else if (dy > cy) {
                 a = 90
-            }else if(dy<cy){
+            } else if (dy < cy) {
                 a = 270
             }
             //phaser tween
             tweenList.push({
                 targets: this.activeEnemy.sprite,
-                x:{value: (dx * this.map.tileWidth)+(0.5*this.map.tileWidth),duration:this.activeEnemy.speed},
-                y:{value: (dy*this.map.tileHeight)+(0.5*this.map.tileHeight), duration:this.activeEnemy.speed},
-                angle:{value:a, duration: 0}
+                x: { value: (dx * this.map.tileWidth) + (0.5 * this.map.tileWidth), duration: this.activeEnemy.speed },
+                y: { value: (dy * this.map.tileHeight) + (0.5 * this.map.tileHeight), duration: this.activeEnemy.speed },
+                angle: { value: a, duration: 0 }
             })
         }
         this.tweens.timeline({
-            tweens:tweenList
+            tweens: tweenList
         })
     }
     onEnemySpawn() {
         let index = Phaser.Math.Between(0, this.enemySpawnPoints.length - 1)
-        console.log(index)
         let spawnPoint = this.enemySpawnPoints[index]
-        console.log('Spawnpoint' + spawnPoint)
+        //console.log('Spawnpoint' + spawnPoint)
         let enemy = new Enemy(this, spawnPoint.x, spawnPoint.y, 'enemy')
         enemy.targetX = spawnPoint.x
         enemy.targetY = spawnPoint.y
@@ -180,9 +204,9 @@ class PathFindingScene extends Phaser.Scene {
         this.activeEnemy = enemy
         let toX = Math.floor(this.player.sprite.x / this.map.tileWidth) * this.map.tileWidth + (this.map.tileWidth / 2)
         let toY = Math.floor(this.player.sprite.y / this.map.tileHeight) * this.map.tileHeight + (this.map.tileHeight / 2)
-        enemy.targetX=toX
-        enemy.targetY=toY
-        this.findPath({ x:toX, y:toY})
+        enemy.targetX = toX
+        enemy.targetY = toY
+        this.findPath({ x: toX, y: toY })
     }
     collectGun(player, gun) {
         this.gun.destroy()
@@ -194,23 +218,24 @@ class PathFindingScene extends Phaser.Scene {
         //simple way to add an offset to a sprite
         let vector = new Phaser.Math.Vector2(48, 19)
         vector.rotate(this.player.sprite.rotation)
-        console.log(vector)
+
         let bullet = this.bullets.get(this.player.sprite.x + vector.x, this.player.sprite.y + vector.y)
-        if(this.ammo >=0){
-        if (bullet) {
-            this.ammo -=1
-            console.log('ammo:'+this.ammo)
-            bullet.setDepth(4)
-            bullet.body.collideWorldBounds = true
-            bullet.body.onWorldBounds = true
-            bullet.enableBody(false, bullet.x, bullet.y, true, true)
-            bullet.rotation = this.player.sprite.rotation
-            this.physics.velocityFromRotation(bullet.rotation, 700, bullet.body.velocity)
-            for(let i = 0;i<this.enemies.length; i++){
-                this.physics.add.collider(this.enemies[i].sprite,bullet, this.bulletHitEnemy,null, this)
+        if (this.player.ammo >= 1) {
+            if (bullet) {
+                this.player.ammo -= 1
+                //console.log('ammo:' + this.player.ammo)
+                bullet.setDepth(4)
+                bullet.body.collideWorldBounds = true
+                bullet.body.onWorldBounds = true
+                bullet.enableBody(false, bullet.x, bullet.y, true, true)
+                bullet.rotation = this.player.sprite.rotation
+                this.physics.velocityFromRotation(bullet.rotation, 700, bullet.body.velocity)
+                for (let i = 0; i < this.enemies.length; i++) {
+                    this.physics.add.collider(this.enemies[i].sprite, bullet, this.bulletHitEnemy, null, this)
+                }
             }
         }
-    }
+        this.ammoText.setText('ammo' + this.player.ammo)
     }
     worldBoundsBullet(body) {
         //return bullet to object pool
@@ -222,16 +247,16 @@ class PathFindingScene extends Phaser.Scene {
     bulletHitEnemy(enemySprite, bullet) {
         bullet.disableBody(true, true)
         let index
-        for(let i = 0; i< this.enemies.length; i++){
-            if(this.enemies[i].sprite ===enemySprite){
+        for (let i = 0; i < this.enemies.length; i++) {
+            if (this.enemies[i].sprite === enemySprite) {
                 index = i
                 break
             }
         }
         this.enemies.splice(index, 1)
-        this.add.image(enemySprite.x,enemySprite.y,'deadEnemy').setRotation(enemySprite.rotation).setDepth(0)
+        this.add.image(enemySprite.x, enemySprite.y, 'deadEnemy').setRotation(enemySprite.rotation).setDepth(0)
         enemySprite.destroy()
-        if(!this.player.isDead&&this.enemies.length<this.minEnemies){
+        if (!this.player.isDead && this.enemies.length < this.minEnemies) {
             this.onEnemySpawn()
         }
 
@@ -242,10 +267,44 @@ class PathFindingScene extends Phaser.Scene {
         this.player.isDead = true
         this.player.sprite.setTint(0xFF0000)
     }
+    //ammo pick up and creation
+    createAmmo(index) {
+        let ammoClip
+        ammoClip = this.physics.add.image(index.x, index.y, 'ammo')
+        this.physics.add.overlap(ammoClip, this.player.sprite, this.ammoPickup, null, this)
+    }
+    ammoPickup(ammoClip) {
+        ammoClip.disableBody(true, true)
+        this.player.ammo += 5
+        this.ammoText.setText('ammo' + this.player.ammo)
+    }
+    //collectables pickup
+    createCollectable(dataObject) {
+        console.log(dataObject)
+        let collectable
+        //collectable = new Collectable(this, dataObject.x,dataObject.y,'collectable1')
+        collectable = this.physics.add.image(dataObject.x, dataObject.y, 'collectable1')
+        this.physics.add.overlap(collectable, this.player.sprite, this.collectPick, null, this)
+        console.log(collectable)
+        console.log(this.player)
+
+    }
+    collectPick(collectable) {
+        collectable.disableBody(true, true)
+        let collectableUI
+        collectableUI = this.add.image(64, 128, 'collectable1')
+        this.collectionTotal += 1
+        console.log(this.collectionTotal)
+
+    }
     update(time, delta) {
         this.player.update(time, delta)
         for (let i = 0; i < this.enemies.length; i++) {
             this.enemies[i].update(time, delta)
+        }
+        if(this.collectionTotal == 2){
+            this.minEnemies = 5
+            
         }
     }
 }
