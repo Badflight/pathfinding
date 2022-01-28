@@ -58,6 +58,7 @@ class PathFindingScene extends Phaser.Scene {
         groundAndWallsLayer.setCollisionByProperty({ valid: false })
         let ammoObjects = []
         let collectablePoints = []
+        let doorDestX
         //player creation
         objectLayer.objects.forEach(function (object) {
             let dataObject = Utils.RetrieveCustomProperties(object)
@@ -74,12 +75,18 @@ class PathFindingScene extends Phaser.Scene {
             else if (dataObject.type === "doorSpawn") {
                 this.door = new Door(this, dataObject.x, dataObject.y, 'door')
             }
+            else if(dataObject.type ==="doorDest"){
+                console.log('door')
+                //@ts-ignore
+                this.door.doorDest(dataObject.x,dataObject.y)
+                 
+                doorDestX = dataObject.x
+            }
             else if (dataObject.type === "ammoPickup") {
                 ammoObjects.push(dataObject)
             }
             else if (dataObject.type === "collectableSpawn") {
                 collectablePoints.push(dataObject)
-                console.log('collectable')
             }
         }, this)
         for (let i = 0; i < collectablePoints.length; i++) {
@@ -132,6 +139,9 @@ class PathFindingScene extends Phaser.Scene {
             this.createAmmo(ammoObjects[i])
         }
         this.ammoText = this.add.text(32, 32, 'ammo' + this.player.ammo, {
+            fontSize: '96px'
+        }).setScrollFactor(0)
+        this.scoreText = this.add.text(750,64, 'Jewels: '+this.collectionTotal,{
             fontSize: '96px'
         }).setScrollFactor(0)
     }
@@ -280,13 +290,11 @@ class PathFindingScene extends Phaser.Scene {
     }
     //collectables pickup
     createCollectable(dataObject) {
-        console.log(dataObject)
+        //console.log(dataObject)
         let collectable
         //collectable = new Collectable(this, dataObject.x,dataObject.y,'collectable1')
         collectable = this.physics.add.image(dataObject.x, dataObject.y, 'collectable1')
         this.physics.add.overlap(collectable, this.player.sprite, this.collectPick, null, this)
-        console.log(collectable)
-        console.log(this.player)
 
     }
     collectPick(collectable) {
@@ -295,6 +303,7 @@ class PathFindingScene extends Phaser.Scene {
         collectableUI = this.add.image(64, 128, 'collectable1')
         this.collectionTotal += 1
         console.log(this.collectionTotal)
+        this.scoreText.setText('Jewels: '+this.collectionTotal)
 
     }
     update(time, delta) {
@@ -303,7 +312,14 @@ class PathFindingScene extends Phaser.Scene {
             this.enemies[i].update(time, delta)
         }
         if(this.collectionTotal == 2){
-            this.minEnemies = 5
+            this.minEnemies = 4
+            if(!this.player.isDead&&this.enemies.length<this.minEnemies){
+                console.log(time)
+                this.onEnemySpawn()
+            }
+            this.door.doorMove()
+            //if(this.door.)
+            
             
         }
     }
