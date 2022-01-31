@@ -11,6 +11,8 @@ class PathFindingScene extends Phaser.Scene {
     collectables
     /**@type {number} */
     collectionTotal = 0
+    /**@type {number} */
+    doorDestX = 0
     /**@type {Collectable} */
     singularCollectable
     /** @type {Array.<object>} */
@@ -46,6 +48,7 @@ class PathFindingScene extends Phaser.Scene {
         this.load.image('door', 'assets/door.png')
         //collectable asset
         this.load.image('collectable1', 'assets/blue-jewel.png')
+        this.load.image('trophey','assets/trophey-1.png')
 
     }
     create() {
@@ -55,10 +58,14 @@ class PathFindingScene extends Phaser.Scene {
         const tileset = this.map.addTilesetImage('tileset', 'tileset')
         const groundAndWallsLayer = this.map.createLayer('groundAndWallsLayer', tileset, 0, 0)
         const objectLayer = this.map.getObjectLayer('objectLayer')
+        //const gameOverLayer = this.map.createLayer('gameOverTiles', tileset, 0, 0)
         groundAndWallsLayer.setCollisionByProperty({ valid: false })
+        //gameOverLayer.setCollisionByProperty({ valid: false })
+        //index overlap for player
+
         let ammoObjects = []
         let collectablePoints = []
-        let doorDestX
+        let doorDestX = 0
         //player creation
         objectLayer.objects.forEach(function (object) {
             let dataObject = Utils.RetrieveCustomProperties(object)
@@ -75,12 +82,12 @@ class PathFindingScene extends Phaser.Scene {
             else if (dataObject.type === "doorSpawn") {
                 this.door = new Door(this, dataObject.x, dataObject.y, 'door')
             }
-            else if(dataObject.type ==="doorDest"){
+            else if (dataObject.type === "doorDest") {
                 console.log('door')
                 //@ts-ignore
-                this.door.doorDest(dataObject.x,dataObject.y)
-                 
-                doorDestX = dataObject.x
+                this.door.doorDest(dataObject.x, dataObject.y)
+
+                this.doorDestX = dataObject.x
             }
             else if (dataObject.type === "ammoPickup") {
                 ammoObjects.push(dataObject)
@@ -88,10 +95,15 @@ class PathFindingScene extends Phaser.Scene {
             else if (dataObject.type === "collectableSpawn") {
                 collectablePoints.push(dataObject)
             }
+            else if(dataObject.type ==="tropheySpawn"){
+                this.trophey = new Collectable(this,dataObject.x,dataObject.y,'trophey')
+                console.log('trophey')
+            }
         }, this)
         for (let i = 0; i < collectablePoints.length; i++) {
             this.createCollectable(collectablePoints[i])
         }
+        this.cameras.main.startFollow(this.player.sprite,true,0.25,0.25)
         this.physics.add.collider(this.player.sprite, groundAndWallsLayer)
         this.physics.add.overlap(this.player.sprite, this.gun, this.collectGun, null, this)
         //bullet group
@@ -141,7 +153,7 @@ class PathFindingScene extends Phaser.Scene {
         this.ammoText = this.add.text(32, 32, 'ammo' + this.player.ammo, {
             fontSize: '96px'
         }).setScrollFactor(0)
-        this.scoreText = this.add.text(750,64, 'Jewels: '+this.collectionTotal,{
+        this.scoreText = this.add.text(750, 64, 'Jewels: ' + this.collectionTotal, {
             fontSize: '96px'
         }).setScrollFactor(0)
     }
@@ -302,8 +314,8 @@ class PathFindingScene extends Phaser.Scene {
         let collectableUI
         collectableUI = this.add.image(64, 128, 'collectable1')
         this.collectionTotal += 1
-        console.log(this.collectionTotal)
-        this.scoreText.setText('Jewels: '+this.collectionTotal)
+        //console.log(this.collectionTotal)
+        this.scoreText.setText('Jewels: ' + this.collectionTotal)
 
     }
     update(time, delta) {
@@ -311,16 +323,20 @@ class PathFindingScene extends Phaser.Scene {
         for (let i = 0; i < this.enemies.length; i++) {
             this.enemies[i].update(time, delta)
         }
-        if(this.collectionTotal == 2){
+        if (this.collectionTotal == 2) {
             this.minEnemies = 4
-            if(!this.player.isDead&&this.enemies.length<this.minEnemies){
-                console.log(time)
+            if (!this.player.isDead && this.enemies.length < this.minEnemies) {
+                //console.log(time)
                 this.onEnemySpawn()
             }
             this.door.doorMove()
             //if(this.door.)
-            
-            
+
+
+        }
+        if (this.door.sprite.x <= this.doorDestX) {
+            console.log('pass')
+            this.door.sprite.setVelocityX(0)
         }
     }
 }

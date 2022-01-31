@@ -14,9 +14,8 @@ class Door {
     }
     doorMove(){
         this.sprite.setVelocityX(-100)
-        if (this.sprite.x === this.doorDestX){
-            this.sprite.setVelocityX(0)
-            console.log('pass')
-        }
+        // if (this.sprite.x === this.doorDestX){
+        //     this.sprite.setVelocityX(0)
+        // }
     }
 }
